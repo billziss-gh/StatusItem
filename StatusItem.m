@@ -19,6 +19,10 @@ static NSMutableDictionary *statusItems;
 - (void)setStatusItem:(NSDictionary *)dict;
 @end
 @implementation StatusItemObject
+- (NSArray *)listStatusItems
+{
+    return [[statusItems allKeys] sortedArrayUsingSelector:@selector(compare:)];
+}
 - (void)setStatusItem:(NSDictionary *)dict
 {
     NSString *name, *path, *mesg;
@@ -50,7 +54,10 @@ static NSMutableDictionary *statusItems;
     else
     {
         if (nil != item)
+        {
+            [[NSStatusBar systemStatusBar] removeStatusItem:item];
             [statusItems removeObjectForKey:name];
+        }
         if (0 == [statusItems count])
             [[NSApplication sharedApplication]
                 performSelector:@selector(terminate:) withObject:nil afterDelay:0];
@@ -65,8 +72,21 @@ void fail(const char *mesg)
 }
 void usage(char *prog)
 {
-    fprintf(stderr, "usage: %s [-m MESSAGE] NAME [PATH]\n", basename(prog));
+    prog = basename(prog);
+    fprintf(stderr,
+        "usage: %s -l\n"
+        "usage: %s [-m MESSAGE] NAME [PATH]\n",
+        prog, prog);
     exit(2);
+}
+void list(const char *prog)
+{
+    NSArray *names;
+    names = [[NSConnection
+        rootProxyForConnectionWithRegisteredName:[NSString stringWithUTF8String:prog]
+        host:nil] listStatusItems];
+    for (NSString *name in names)
+        printf("%s\n", [name UTF8String]);
 }
 void run(const char *prog, const char *name, const char *path, const char *mesg)
 {
@@ -101,11 +121,14 @@ void run(const char *prog, const char *name, const char *path, const char *mesg)
 int main(int argc, char *argv[])
 {
     const char *prog, *name, *path = 0, *mesg = 0;
-    int opt;
+    int opt, lopt = 0;
     opterr = 0;
-    while (-1 != (opt = getopt(argc, argv, "m:")))
+    while (-1 != (opt = getopt(argc, argv, "lm:")))
         switch (opt)
         {
+        case 'l':
+            lopt = 1;
+            break;
         case 'm':
             mesg = optarg;
             break;
@@ -113,20 +136,32 @@ int main(int argc, char *argv[])
             usage(argv[0]);
             break;
         }
-    if (1 > argc - optind || argc - optind > 2)
-        usage(argv[0]);
-    prog = realpath(argv[0], 0);
-    if (0 == prog)
-        fail("cannot get program path");
-    name = argv[optind];
-    if (2 == argc - optind)
+    if (lopt)
     {
-        path = realpath(argv[optind + 1], 0);
-        if (0 == path)
-            fail("cannot access image");
+        if (0 != argc - optind)
+            usage(argv[0]);
+        prog = realpath(argv[0], 0);
+        if (0 == prog)
+            fail("cannot get program path");
+        list(prog);
     }
-    if (-1 == daemon(0, 0))
-        fail("cannot daemonize");
-    run(prog, name, path, mesg);
+    else
+    {
+        if (1 > argc - optind || argc - optind > 2)
+            usage(argv[0]);
+        prog = realpath(argv[0], 0);
+        if (0 == prog)
+            fail("cannot get program path");
+        name = argv[optind];
+        if (2 == argc - optind)
+        {
+            path = realpath(argv[optind + 1], 0);
+            if (0 == path)
+                fail("cannot access image");
+        }
+        if (-1 == daemon(0, 0))
+            fail("cannot daemonize");
+        run(prog, name, path, mesg);
+    }
     return 0;
 }
