@@ -2,14 +2,47 @@
 
 A simple command line utility to manage status items on the Mac's menu bar.
 
+## Usage ##
+
+Create a new status item with a name `NAME` and icon `/PATH/TO/ICON.icns`:
+```
+$ StatusItem NAME /PATH/TO/ICON.icns
+```
+
+Modify the status item with a different icon `/PATH/TO/ANOTHER/ICON.png` and the message `MESSAGE TEXT`:
+```
+$ StatusItem -m "MESSAGE TEXT" NAME /PATH/TO/ANOTHER/ICON.png
+```
+
+Add a second status item with name `NAME2` and icon `/PATH/TO/ICON2.icns`:
+```
+$ StatusItem NAME2 /PATH/TO/ICON2.icns
+```
+
+Remove both status items:
+```
+$ StatusItem NAME
+$ StatusItem NAME2
+```
+
+The full command line usage is:
+```
+$ StatusItem
+usage: StatusItem [-m MESSAGE] NAME [PATH]
+```
+
 ## Building on OS X ##
 
-Simply execute the following command: `sh ./StatusItem.m -o StatusItem`. This will execute the proper `clang` command and will create the executable `StatusItem`.
+Simply execute the following command:
+```
+$ sh ./StatusItem.m -o StatusItem
+```
+
+This will execute the proper `clang` command and will create the executable `StatusItem`.
 
 ## License (BSD 3-Clause) ##
 
-Copyright (c) 2015, Bill Zissimopoulos.
-All rights reserved.
+Copyright (c) 2015 Bill Zissimopoulos. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
