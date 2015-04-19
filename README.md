@@ -14,6 +14,7 @@ Modify one of the status items:
 ```
 $ StatusItem -m "MESSAGE TEXT" NAME /PATH/TO/ANOTHER/ICON.png
 ```
+
 Remove both status items:
 ```
 $ StatusItem NAME
