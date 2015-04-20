@@ -36,11 +36,15 @@
 
 static NSImage *ImageResize(NSImage *sourceImage, CGSize size)
 {
+    BOOL isTemplate = [sourceImage isTemplate];
+    [sourceImage setTemplate:NO];
     CGRect targetFrame = CGRectMake(0, 0, size.width, size.height);
     NSImage *targetImage = [[[NSImage alloc] initWithSize:size] autorelease];
     [targetImage lockFocus];
     [[sourceImage bestRepresentationForRect:targetFrame context:nil hints:nil] drawInRect:targetFrame];
     [targetImage unlockFocus];
+    [targetImage setTemplate:isTemplate];
+    [sourceImage setTemplate:isTemplate];
     return targetImage;
 }
 
