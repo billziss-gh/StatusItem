@@ -26,9 +26,11 @@ static NSMutableDictionary *statusItems;
 - (void)setStatusItem:(NSDictionary *)dict
 {
     NSString *name, *path, *mesg;
+    int remv;
     name = [dict objectForKey:@"name"];
     path = [dict objectForKey:@"path"];
     mesg = [dict objectForKey:@"mesg"];
+    remv = [[dict objectForKey:@"remv"] intValue];
     NSStatusItem *item = [statusItems objectForKey:name];
     if (nil != path)
     {
@@ -42,10 +44,20 @@ static NSMutableDictionary *statusItems;
                 [item setHighlightMode:YES];
                 [statusItems setObject:item forKey:name];
             }
-            if (nil != mesg)
+            if (nil != mesg || remv)
             {
                 NSMenu *menu = [[[NSMenu alloc] initWithTitle:@""] autorelease];
-                [menu addItemWithTitle:mesg action:nil keyEquivalent:@""];
+                if (nil != mesg)
+                    [menu addItemWithTitle:mesg action:nil keyEquivalent:@""];
+                if (remv)
+                {
+                    NSMenuItem *menuItem = [[[NSMenuItem alloc]
+                        initWithTitle:@"Remove" action:@selector(removeStatusItemFromMenu:) keyEquivalent:@""]
+                        autorelease];
+                    [menuItem setTarget:self];
+                    [menuItem setRepresentedObject:name];
+                    [menu addItem:menuItem];
+                }
                 [item setMenu:menu];
             }
             [item setImage:image];
@@ -63,6 +75,12 @@ static NSMutableDictionary *statusItems;
                 performSelector:@selector(terminate:) withObject:nil afterDelay:0];
     }
 }
+- (void)removeStatusItemFromMenu:(id)sender
+{
+    NSString *name = [sender representedObject];
+    if (nil != name)
+        [self setStatusItem:[NSDictionary dictionaryWithObject:name forKey:@"name"]];
+}
 @end
 
 void fail(const char *mesg)
@@ -75,7 +93,7 @@ void usage(char *prog)
     prog = basename(prog);
     fprintf(stderr,
         "usage: %s -l\n"
-        "usage: %s [-m MESSAGE] NAME [PATH]\n",
+        "usage: %s [-m MESSAGE][-r] NAME [PATH]\n",
         prog, prog);
     exit(2);
 }
@@ -88,7 +106,7 @@ void list(const char *prog)
     for (NSString *name in names)
         printf("%s\n", [name UTF8String]);
 }
-void run(const char *prog, const char *name, const char *path, const char *mesg)
+void run(const char *prog, const char *name, const char *path, const char *mesg, int remv)
 {
     @autoreleasepool
     {
@@ -97,33 +115,42 @@ void run(const char *prog, const char *name, const char *path, const char *mesg)
         id obj;
         dict = [NSDictionary dictionaryWithObjectsAndKeys:
             [NSString stringWithUTF8String:name], @"name",
+            [NSNumber numberWithInt:remv], @"remv",
             0 != path ? [NSString stringWithUTF8String:path] : nil, @"path",
             0 != mesg ? [NSString stringWithUTF8String:mesg] : nil, @"mesg",
             nil];
-        obj = [[StatusItemObject new] autorelease];
-        conn = [NSConnection
-            serviceConnectionWithName:[NSString stringWithUTF8String:prog] rootObject:obj];
-        if (nil == conn)
+        obj = [NSConnection
+            rootProxyForConnectionWithRegisteredName:[NSString stringWithUTF8String:prog]
+            host:nil];
+        [obj setStatusItem:dict];
+        if (nil == obj)
         {
-            obj = [NSConnection
-                rootProxyForConnectionWithRegisteredName:[NSString stringWithUTF8String:prog]
-                host:nil];
-            [obj setStatusItem:dict];
-        }
-        else
-        {
-            statusItems = [NSMutableDictionary new];
-            [obj performSelector:@selector(setStatusItem:) withObject:dict afterDelay:0];
-            [[NSApplication sharedApplication] run];
+            obj = [[StatusItemObject new] autorelease];
+            conn = [NSConnection
+                serviceConnectionWithName:[NSString stringWithUTF8String:prog] rootObject:obj];
+            if (nil == conn)
+            {
+                /* 2nd attempt in case of race */
+                obj = [NSConnection
+                    rootProxyForConnectionWithRegisteredName:[NSString stringWithUTF8String:prog]
+                    host:nil];
+                [obj setStatusItem:dict];
+            }
+            else
+            {
+                statusItems = [NSMutableDictionary new];
+                [obj performSelector:@selector(setStatusItem:) withObject:dict afterDelay:0];
+                [[NSApplication sharedApplication] run];
+            }
         }
     }
 }
 int main(int argc, char *argv[])
 {
     const char *prog, *name, *path = 0, *mesg = 0;
-    int opt, lopt = 0;
+    int opt, lopt = 0, ropt = 0;
     opterr = 0;
-    while (-1 != (opt = getopt(argc, argv, "lm:")))
+    while (-1 != (opt = getopt(argc, argv, "lm:r")))
         switch (opt)
         {
         case 'l':
@@ -131,6 +158,9 @@ int main(int argc, char *argv[])
             break;
         case 'm':
             mesg = optarg;
+            break;
+        case 'r':
+            ropt = 1;
             break;
         case '?':
             usage(argv[0]);
@@ -161,7 +191,7 @@ int main(int argc, char *argv[])
         }
         if (-1 == daemon(0, 0))
             fail("cannot daemonize");
-        run(prog, name, path, mesg);
+        run(prog, name, path, mesg, ropt);
     }
     return 0;
 }
