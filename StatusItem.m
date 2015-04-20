@@ -64,7 +64,9 @@ static NSMutableDictionary *statusItems;
     NSStatusItem *item = [statusItems objectForKey:name];
     if (nil != path)
     {
-        NSImage *image = [[[NSImage alloc] initWithContentsOfFile:path] autorelease];
+        NSImage *image = [path hasPrefix:@":"] ?
+            [NSImage imageNamed:[path substringFromIndex:1]] :
+            [[[NSImage alloc] initWithContentsOfFile:path] autorelease];
         if (nil != image)
         {
             image = ImageResize(image, CGSizeMake(18, 18));
@@ -123,7 +125,7 @@ void usage(char *prog)
     prog = basename(prog);
     fprintf(stderr,
         "usage: %s -l\n"
-        "usage: %s [-m MESSAGE][-r] NAME [PATH]\n",
+        "usage: %s [-m MESSAGE][-r] NAME [PATH|:NAME]\n",
         prog, prog);
     exit(2);
 }
@@ -215,9 +217,14 @@ int main(int argc, char *argv[])
         name = argv[optind];
         if (2 == argc - optind)
         {
-            path = realpath(argv[optind + 1], 0);
-            if (0 == path)
-                fail("cannot access image");
+            if (':' == argv[optind + 1][0])
+                path = argv[optind + 1];
+            else
+            {
+                path = realpath(argv[optind + 1], 0);
+                if (0 == path)
+                    fail("cannot access image");
+            }
         }
         if (-1 == daemon(0, 0))
             fail("cannot daemonize");

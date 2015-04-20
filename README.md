@@ -15,6 +15,11 @@ Modify one of the status items:
 $ StatusItem -m "MESSAGE TEXT" NAME /PATH/TO/ANOTHER/ICON.png
 ```
 
+You can also use system image names by prefixing with colon:
+```
+$ StatusItem NAME :NSStatusAvailable
+```
+
 Remove both status items:
 ```
 $ StatusItem NAME
