@@ -13,7 +13,7 @@ $ StatusItem red :NSStatusUnavailable
 ```
 
 Will result in the following status bar:
-![Menu Bar](MenuBar.png)
+![Menu Bar](https://bytebucket.org/billziss/statusitem/raw/2d2b8b0e14006762bb8a234ad521bfbf36636efd/MenuBar.png)
 
 To list all status items:
 ```
